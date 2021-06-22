@@ -8,7 +8,6 @@ import (
 )
 
 const loginPageUrl = "http://222.204.3.210/ssdf/Account/LogOn"
-const eleInfoPageUrl = "http://222.204.3.210/ssdf/EEMQuery/EEMBalance"
 
 type eleInfo struct {
 	UsedTotal     float32   `json:"used_total"`      //最新读数(度)
@@ -25,37 +24,16 @@ func parseFloat32(a string) float32 {
 
 // GetInfo  接收寝室号
 func GetInfo(dormId uint) (*eleInfo, error) {
-	header, i, e := tool.HTTP.GetReader(
-		loginPageUrl,
-		nil, nil, nil, true)
-	if e != nil {
-		return nil, e
-	}
-	_ = i.Close()
-	cookies := tool.Cookie.Decode(header.Get("Set-Cookie"), nil)
-
-	header, i, e = tool.HTTP.PostReader(
+	d, e := tool.HTTP.PostGoquery(
 		loginPageUrl,
 		map[string]interface{}{
 			"Content-Type": "application/x-www-form-urlencoded",
 		}, nil, map[string]interface{}{
 			"UserName": dormId,
-		}, cookies, false)
+		}, nil, true)
 	if e != nil {
 		return nil, e
 	}
-	_ = i.Close()
-
-	tool.Cookie.Decode(header.Get("Set-Cookie"), cookies)
-
-	d, e := tool.HTTP.GetGoquery(
-		eleInfoPageUrl,
-		nil, nil, cookies, true)
-
-	if e != nil {
-		return nil, e
-	}
-
 	t := d.Find("table tbody").First().Find("tr").First()
 	usedTotal := parseFloat32(t.Find("td").First().Next().Text())
 	updateAt, _ := time.ParseInLocation("2006-01-02 15:04", strings.TrimSpace(t.Find("td").Last().Text()), time.Local)
